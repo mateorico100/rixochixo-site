@@ -140,7 +140,7 @@
     '#rx-shake label{display:flex;gap:10px;align-items:center;margin:0;font-weight:400}' +
     '#rx-shake input[type=range]{accent-color:' + CALM + ';width:120px}' +
     '#rx-shake .rs-gm{flex:1 1 320px;min-width:0;max-width:100%}' +
-    '#rx-shake .rs-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:16px}' +
+    '#rx-shake .rs-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);grid-template-areas:"frame side" "acc acc";gap:16px}#rx-shake .rs-frame{grid-area:frame}#rx-shake .rs-side{grid-area:side}#rx-shake .rs-acc{grid-area:acc}' +
     '#rx-shake canvas{display:block;width:100%;border:1px solid ' + LINE + '}' +
     '#rx-shake .rs-stats{display:grid;grid-template-columns:auto auto auto;gap:6px 14px;margin-top:14px;font-size:14px;align-items:baseline}' +
     '#rx-shake .rs-stats b{color:#fff;font-weight:600;white-space:nowrap}' +
@@ -149,7 +149,7 @@
     '#rx-shake .rs-note{margin-top:14px;color:#8a8f99;font-size:12px;line-height:1.5}' +
     '#rx-shake .rs-play{background:#fff;color:#000;border:0;padding:11px 22px;font-weight:700;cursor:pointer;font:inherit;font-weight:700}' +
     '#rx-shake .rs-speed{background:#000;color:#fff;border:1px solid #333;padding:10px 12px;cursor:pointer;font:inherit}' +
-    '@media (max-width:767px){#rx-shake .rs-grid{grid-template-columns:minmax(0,1fr)}#rx-shake .rs-row label{flex:1 1 100%;justify-content:space-between}#rx-shake input[type=range]{flex:1}#rx-shake select{max-width:100%}#rx-shake .rs-stats{gap:6px 10px;font-size:13px}}' +
+    '@media (max-width:767px){#rx-shake .rs-grid{grid-template-columns:minmax(0,1fr);grid-template-areas:"frame" "acc" "side";gap:12px}#rx-shake .rs-row label{flex:1 1 100%;justify-content:space-between}#rx-shake input[type=range]{flex:1}#rx-shake select{max-width:100%}#rx-shake .rs-stats{gap:6px 10px;font-size:13px}}' +
     '</style>' +
     '<div class="rs-row"><select class="rs-gm" aria-label="Ground motion" style="' + field + '"><option>Loading ground motions…</option></select>' +
     '<button type="button" class="rs-play">Shake it</button><button type="button" class="rs-speed" aria-label="Playback speed">1×</button></div>' +
@@ -159,14 +159,14 @@
     '<select class="rs-sys" aria-label="Structural system" style="' + field + '"></select></div>' +
     '<p class="rs-f"></p>' +
     '<div class="rs-grid"><canvas class="rs-frame" style="height:420px;touch-action:pan-y;cursor:grab"></canvas>' +
-    '<div><canvas class="rs-spec" style="height:260px"></canvas><div class="rs-leg" style="font-size:12px;color:#8a8f99;margin-top:6px"></div>' +
+    '<div class="rs-side"><canvas class="rs-spec" style="height:260px"></canvas><div class="rs-leg" style="font-size:12px;color:#8a8f99;margin-top:6px"></div>' +
     '<div class="rs-stats">' +
     '<span></span><span class="rs-h">Time history</span><span class="rs-h">RSA (SRSS)</span>' +
     '<span>Peak drift</span><b class="rs-thd">–</b><b class="rs-rsd">–</b>' +
     '<span>Roof displacement</span><b class="rs-thr">–</b><b class="rs-rsr">–</b>' +
     '<span>Sa(Ta), 5%</span><b class="rs-sa" style="grid-column:span 2">–</b>' +
-    '</div></div></div>' +
-    '<canvas class="rs-acc" style="height:72px;margin-top:16px"></canvas>' +
+    '</div></div>' +
+    '<canvas class="rs-acc" style="height:72px"></canvas></div>' +
     '<p class="rs-note">Ground motions: PEER NGA-West2 records, scaled, from a CE 5515 project with Mehdi Samimy. ' +
     'Elastic uniform shear frame, 5% damping, Ta per ASCE 7-22 §12.8.2.1. A floor turns white past 2% story drift (ASCE 7 Table 12.12-1, Risk Category II). ' +
     'Not for design.</p>';
