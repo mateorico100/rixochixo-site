@@ -131,7 +131,7 @@
   var root = document.getElementById('rx-shake');
   if (!root) return;
 
-  var CALM = '#acb2c0', OVER = '#ffffff', DIM = '#524f5a', LINE = '#333', TEXT = '#d0d0d0';
+  var CALM = '#acb2c0', ACTIVE = '#c8f230', OVER = '#ffffff', DIM = '#524f5a', LINE = '#333', TEXT = '#d0d0d0';
   var field = 'background:#000;color:#fff;border:1px solid #333;padding:8px 10px;font:inherit;font-size:14px;';
   root.innerHTML =
     '<style>' +
@@ -156,6 +156,7 @@
     '<div class="rs-row">' +
     '<label>Stories <input type="range" class="rs-n" min="1" max="40" step="1" value="12" aria-label="Number of stories"> <b class="rs-nv" style="color:#fff;min-width:2ch"></b></label>' +
     '<label>Story height <input type="range" class="rs-h-in" min="9" max="20" step="1" value="13" aria-label="Story height in feet"> <b class="rs-hv" style="color:#fff;min-width:5ch"></b></label>' +
+    '<label>Displacement scale <input type="range" class="rs-x" min="0" max="10" step="1" value="4" aria-label="Displacement drawing scale"> <b class="rs-xv" style="color:#fff;min-width:5ch"></b></label>' +
     '<select class="rs-sys" aria-label="Structural system" style="' + field + '"></select></div>' +
     '<p class="rs-f"></p>' +
     '<div class="rs-grid"><canvas class="rs-frame" style="height:420px;touch-action:pan-y;cursor:grab"></canvas>' +
@@ -183,7 +184,8 @@
   });
 
   var index = null, cache = {}, rec = null, recSa = null;
-  var n, hFt, sys, Ta, hn, frame, est, scale = 1, exag = 1;
+  var n, hFt, sys, Ta, hn, frame, est, scale = 1, exag = 1, userExag = 0;
+  var SCALES = [1, 2, 5, 10, 20, 50, 100, 200, 500, 1000, 2000];
   var playing = false, t = 0, speed = 1, running = false, last = 0;
   var dragging = false, gd = 0, gdPrev = 0, gdPrev2 = 0, target = 0;
   var peak = 0, peakStory = 0, peakRoof = 0, ratio = new Float64Array(40);
@@ -223,8 +225,14 @@
     $('.rs-sa').textContent = fmt(saAt(index.periods, recSa, Ta), 3) + ' g at ' + fmt(Ta, 2) + ' s';
     // pick an exaggeration so the RSA roof displacement fills about a third of the free width
     var room = Math.max(40, (dims.fw || 600) / 2 - (dims.half || 90) - 10);
-    exag = Math.max(1, niceExag(0.35 * room / (Math.max(est.roof, 0.05) * scale)));
+    exag = userExag || Math.min(2000, Math.max(1, niceExag(0.35 * room / (Math.max(est.roof, 0.05) * scale))));
+    showExag();
     drawSpectrum();
+  }
+
+  function showExag() {
+    $('.rs-x').value = SCALES.indexOf(exag) < 0 ? 4 : SCALES.indexOf(exag);
+    $('.rs-xv').textContent = exag + '×';
   }
 
   function resetPeaks() {
@@ -329,7 +337,7 @@
     }
     index.records.forEach(function (r) { if (r.Sa !== recSa) curve(r.Sa, 'rgba(172,178,192,0.16)', 1); });
     curve(index.meanSa, '#fff', 1.5);
-    curve(recSa, CALM, 2.5);
+    curve(recSa, ACTIVE, 2.5);
     // Ta line and higher modes
     sx.strokeStyle = '#fff';
     sx.setLineDash([4, 4]);
@@ -338,14 +346,14 @@
     sx.setLineDash([]);
     if (est) est.modes.forEach(function (md, j) {
       if (md.T < tMin) return;
-      sx.fillStyle = j ? CALM : '#fff';
+      sx.fillStyle = j ? ACTIVE : '#fff';
       sx.beginPath(); sx.arc(X(md.T), Y(saAt(P, recSa, md.T)), j ? 3 : 5, 0, 2 * Math.PI); sx.fill();
     });
     sx.restore();
     sx.textAlign = 'left';
     sx.fillStyle = '#fff';
     sx.fillText('Ta', Math.min(X(Math.max(Ta, tMin)) + 5, W - R - 16), H - B - 6);
-    $('.rs-leg').innerHTML = '<span style="color:' + CALM + '">━</span> selected record &nbsp; <span style="color:#fff">━</span> suite mean of 30 &nbsp; ● modes 1–' + (est ? est.modes.length : 1);
+    $('.rs-leg').innerHTML = '<span style="color:' + ACTIVE + '">━</span> selected record &nbsp; <span style="color:#fff">━</span> suite mean of 30 &nbsp; ● modes 1–' + (est ? est.modes.length : 1);
   }
 
   function drawAccel() {
@@ -517,6 +525,11 @@
   });
   [nIn, hIn].forEach(function (el) { el.addEventListener('input', rebuild); });
   sysSel.addEventListener('change', rebuild);
+  $('.rs-x').addEventListener('input', function () {
+    exag = userExag = SCALES[+this.value];
+    showExag();
+    draw();
+  });
   fCv.addEventListener('pointerdown', function (e) {
     stop();
     dragging = true;
