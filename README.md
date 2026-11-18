@@ -12,3 +12,9 @@ A uniform N-story elastic shear frame you can run under real earthquake records.
 - **Ground motions (`gm/`):** 15 PEER NGA-West2 records, both horizontal components, scaled and resampled to 0.04 s, in g. From a CE 5515 project with Mehdi Samimy.
 
 Elastic and idealized. Not for design.
+
+## home/ — rixochixo.com home v3 (2027)
+
+- `hero3d.js`: SCAN_01, a live point-cloud splat + depth mesh of Mateo (three.js r170). Move to look, drag to orbit, click to break it apart; SPLAT / MESH / DEPTH modes.
+- `me.bin` / `wire.bin`: made from one video frame by `site/home-v3/scan.py` (Depth Anything V2 small, run locally).
+- `home.css` / `home.js`: the page layer (blueprint field, grain, HUD type, decode headline, reveals, card spotlight, cursor).
