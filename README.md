@@ -15,6 +15,6 @@ Elastic and idealized. Not for design.
 
 ## home/ — rixochixo.com home v3 (2027)
 
-- `hero3d.js`: FILE 001, a live point-cloud + depth mesh of Mateo in shirt and tie (three.js r170). Drag to rotate; POINTS / MESH / DEPTH modes. v3.1: composed motion ("James Bond, not crazy").
-- `me.bin` / `wire.bin`: made from one photo by `site/home-v3/scan.py` (Depth Anything V2 small, run locally).
+- `hero3d.js`: FILE 001, a live full-head point cloud + depth mesh of Mateo in shirt and tie (three.js r170). Drag to turn it all the way round; POINTS / MESH / DEPTH modes. Composed motion ("James Bond, not crazy").
+- `me.bin` / `wire.bin`: made by `site/home-v3/scan.py` (Depth Anything V2 small, run locally): front from the Mar 2024 portrait with his current beard composited in (`beard.py`), back and sides shaped and textured from a Nov 2026 side-profile photo.
 - `home.css` / `home.js`: the page layer (blueprint field, HUD type, headline settle, reveals, card spotlight).

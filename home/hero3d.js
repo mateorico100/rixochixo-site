@@ -1,5 +1,6 @@
-/* rixochixo.com home v3.1: FILE 001, Mateo as a live point-cloud + depth mesh. Composed, not loud.
-   Data: me.bin (N x u16 x,y,z + u8 lum + u8 edge) and wire.bin (u16 gw, gh, W, H, step; then gw*gh u16 z; 0 = empty),
+/* rixochixo.com home v3.2: FILE 001, Mateo as a live full-head point cloud + depth mesh. Composed, not loud.
+   Data: me.bin (N x u16 x,y,z + u8 lum + u8 edge; front, inferred back, side walls) and
+   wire.bin (u16 gw, gh, W, H, step, zspan*1e4, nfront lo, hi; then front then back: gw*gh u16 z each; 0 = empty),
    both made by site/home-v3/scan.py from one photo (Depth Anything V2 small, run locally).
    Move = he follows a little. Drag = rotate. Modes: POINTS / MESH / DEPTH. */
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.min.js';
@@ -24,10 +25,10 @@ async function boot(el) {
     '<div class="rx-hud-row bot"><span class="rx-coord">34.0577° N · 117.8215° W</span>' +
     '<span class="rx-modes" role="group" aria-label="Scan view">' +
     '<button type="button" data-m="0" aria-pressed="true">Points</button><button type="button" data-m="1" aria-pressed="false">Mesh</button><button type="button" data-m="2" aria-pressed="false">Depth</button></span></div>' +
-    '<div class="rx-hint">drag to rotate</div>';
+    '<div class="rx-hint">drag to turn</div>';
   el.appendChild(hud);
   el.setAttribute('role', 'img');
-  el.setAttribute('aria-label', 'A live 3D scan of Mateo Rico in a shirt and tie, drawn as a cloud of points. Drag to rotate it.');
+  el.setAttribute('aria-label', 'A live 3D scan of Mateo Rico in a shirt and tie, drawn as a cloud of points. Drag to turn it all the way around.');
 
   const [meBuf, wireBuf] = await Promise.all([
     fetch(BASE + 'me.bin').then(r => { if (!r.ok) throw new Error('me.bin ' + r.status); return r.arrayBuffer(); }),
@@ -45,34 +46,35 @@ async function boot(el) {
 
   // source frame size from the wire header; fit the subject inside the frame
   const wv = new DataView(wireBuf);
-  const gw = wv.getUint16(0, true), gh = wv.getUint16(2, true), SW = wv.getUint16(4, true), SH = wv.getUint16(6, true), GS = wv.getUint16(8, true);
+  const gw = wv.getUint16(0, true), gh = wv.getUint16(2, true), SW = wv.getUint16(4, true), SH = wv.getUint16(6, true), GS = wv.getUint16(8, true), ZSPAN = wv.getUint16(10, true) / 10000, NFRONT = wv.getUint16(12, true) + wv.getUint16(14, true) * 65536;
   const dv = new DataView(meBuf), stride = 8, all = (meBuf.byteLength / stride) | 0;
   let bx0 = 1, bx1 = 0, by0 = 1, by1 = 0;
   for (let i = 0; i < all; i++) { const x = dv.getUint16(i * stride, true) / 65535, y = dv.getUint16(i * stride + 2, true) / 65535; if (x < bx0) bx0 = x; if (x > bx1) bx1 = x; if (y < by0) by0 = y; if (y > by1) by1 = y; }
-  const ASP = SW / SH, SC = Math.min(2.0 / (by1 - by0), 1.7 / ((bx1 - bx0) * ASP)), DZ = 0.55;
+  const ASP = SW / SH, SC = Math.min(2.0 / (by1 - by0), 1.7 / ((bx1 - bx0) * ASP)), ZR = ZSPAN * SC / 2;
   const cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2;
-  const toX = x => (x - cx) * ASP * SC, toY = y => -(y - cy) * SC, toZ = z => (z - 0.55) * DZ;
+  const toX = x => (x - cx) * ASP * SC, toY = y => -(y - cy) * SC, toZ = z => (z - 0.6) * ZSPAN * SC;
   const top = toY(by0), bottom = toY(by1);
 
   // ---------- points ----------
   const keep = small ? 2 : 1, n = Math.floor(all / keep);
-  const pos = new Float32Array(n * 3), lum = new Float32Array(n), edge = new Float32Array(n), seed = new Float32Array(n);
+  const pos = new Float32Array(n * 3), lum = new Float32Array(n), edge = new Float32Array(n), seed = new Float32Array(n), back = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const o = i * keep * stride;
     pos[i * 3] = toX(dv.getUint16(o, true) / 65535); pos[i * 3 + 1] = toY(dv.getUint16(o + 2, true) / 65535); pos[i * 3 + 2] = toZ(dv.getUint16(o + 4, true) / 65535);
-    lum[i] = dv.getUint8(o + 6) / 255; edge[i] = dv.getUint8(o + 7) / 255; seed[i] = Math.random();
+    lum[i] = dv.getUint8(o + 6) / 255; edge[i] = dv.getUint8(o + 7) / 255; seed[i] = Math.random(); back[i] = i * keep >= NFRONT ? 1 : 0;
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   g.setAttribute('aLum', new THREE.BufferAttribute(lum, 1));
   g.setAttribute('aEdge', new THREE.BufferAttribute(edge, 1));
   g.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+  g.setAttribute('aBack', new THREE.BufferAttribute(back, 1));
 
   const U = {
     uTime: { value: 0 }, uBuild: { value: reduce ? 1.2 : 0 }, uTop: { value: top }, uSpan: { value: top - bottom },
     uMouse: { value: new THREE.Vector2(9, 9) }, uScan: { value: -9 }, uMode: { value: 0 },
     uPR: { value: renderer.getPixelRatio() }, uSize: { value: small ? 11.0 : 8.5 },
-    uLime: { value: SLELO }, uSilver: { value: SILVER }, uSplat: { value: 1 }, uWire: { value: 0.1 }
+    uLime: { value: SLELO }, uSilver: { value: SILVER }, uSplat: { value: 1 }, uWire: { value: 0.1 }, uZr: { value: ZR }
   };
 
   // build: a clean top-to-bottom print, the way a scanner lays it down
@@ -99,17 +101,17 @@ async function boot(el) {
     uniforms: U, transparent: true, depthWrite: true, blending: THREE.NormalBlending,
     vertexShader: COMMON + /* glsl */`
       uniform float uPR, uSize;
-      attribute float aLum, aEdge;
+      attribute float aLum, aEdge, aBack;
       varying float vLum, vBand, vZ, vEdge, vVis;
       void main(){
         float band, vis; vec3 q = place(position, aSeed, band, vis);
         vec4 mv = modelViewMatrix * vec4(q, 1.0);
         gl_Position = projectionMatrix * mv;
         vLum = aLum; vBand = band; vZ = position.z; vEdge = aEdge; vVis = vis;
-        gl_PointSize = uSize * uPR * (0.6 + aLum*0.8) / -mv.z;
+        gl_PointSize = uSize * uPR * (1.05 + aLum*0.4) * (1.0 + aBack*0.7) / -mv.z;   // the back and sides are larger so nothing shows through
       }`,
     fragmentShader: /* glsl */`
-      uniform float uMode, uSplat; uniform vec3 uLime, uSilver;
+      uniform float uMode, uSplat, uZr; uniform vec3 uLime, uSilver;
       varying float vLum, vBand, vZ, vEdge, vVis;
       void main(){
         if (vVis < 0.02) discard;
@@ -117,7 +119,7 @@ async function boot(el) {
         float a = exp(-r2*10.0);
         if (a < 0.35) discard;
         vec3 col = vec3(0.05 + vLum*0.98 + vEdge*0.04);
-        if (uMode > 1.5) { float z = clamp(vZ/0.55 + 0.55, 0.0, 1.0); col = mix(vec3(0.1), uSilver*1.5, z); }
+        if (uMode > 1.5) { float z = clamp(vZ/uZr*0.5 + 0.5, 0.0, 1.0); col = mix(vec3(0.06), uSilver*1.5, z*z); }
         col = mix(col, mix(uSilver*1.3, uLime, 0.35), vBand*0.6);
         gl_FragColor = vec4(col, min(1.0, a * 1.15) * uSplat * vVis);
       }`
@@ -125,14 +127,16 @@ async function boot(el) {
   rig.add(new THREE.Points(g, pmat));
 
   // ---------- depth mesh ----------
-  const Z = (i, j) => wv.getUint16(10 + (j * gw + i) * 2, true);
   const segs = [], sd = [];
-  const vtx = (i, j) => [toX(Math.min(SW - 1, i * GS) / (SW - 1)), toY(Math.min(SH - 1, j * GS) / (SH - 1)), toZ(Z(i, j) / 65535)];
-  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
-    if (!Z(i, j)) continue;
-    const s = Math.random();
-    if (i + 1 < gw && Z(i + 1, j)) { segs.push(...vtx(i, j), ...vtx(i + 1, j)); sd.push(s, s); }
-    if (j + 1 < gh && Z(i, j + 1)) { segs.push(...vtx(i, j), ...vtx(i, j + 1)); sd.push(s, s); }
+  for (const layer of [0, 1]) {
+    const Z = (i, j) => wv.getUint16(16 + (layer * gw * gh + j * gw + i) * 2, true);
+    const vtx = (i, j) => [toX(Math.min(SW - 1, i * GS) / (SW - 1)), toY(Math.min(SH - 1, j * GS) / (SH - 1)), toZ(Z(i, j) / 65535)];
+    for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+      if (!Z(i, j)) continue;
+      const s = Math.random();
+      if (i + 1 < gw && Z(i + 1, j)) { segs.push(...vtx(i, j), ...vtx(i + 1, j)); sd.push(s, s); }
+      if (j + 1 < gh && Z(i, j + 1)) { segs.push(...vtx(i, j), ...vtx(i, j + 1)); sd.push(s, s); }
+    }
   }
   const lg = new THREE.BufferGeometry();
   lg.setAttribute('position', new THREE.BufferAttribute(new Float32Array(segs), 3));
@@ -144,8 +148,8 @@ async function boot(el) {
       void main(){ float band, vis; vec3 q = place(position, aSeed, band, vis); vBand = band; vZ = position.z; vVis = vis;
         gl_Position = projectionMatrix * modelViewMatrix * vec4(q, 1.0); }`,
     fragmentShader: /* glsl */`
-      uniform float uWire; uniform vec3 uLime, uSilver; varying float vBand, vZ, vVis;
-      void main(){ float z = clamp(vZ/0.55 + 0.55, 0.0, 1.0);
+      uniform float uWire, uZr; uniform vec3 uLime, uSilver; varying float vBand, vZ, vVis;
+      void main(){ float z = clamp(vZ/uZr*0.5 + 0.5, 0.0, 1.0);
         vec3 col = mix(uSilver*(0.35+0.65*z), uSilver*1.3, vBand);
         gl_FragColor = vec4(col, (uWire*(0.5+0.5*z) + vBand*0.3) * vVis); }`
   });
@@ -203,7 +207,7 @@ async function boot(el) {
     U.uMouse.value.lerp(ndc, 0.15);
     U.uSplat.value += (target.splat - U.uSplat.value) * 0.06;
     U.uWire.value += (target.wire - U.uWire.value) * 0.06;
-    if (!drag) { orbitX *= 0.95; orbitY *= 0.95; }
+    if (!drag) { orbitX *= 0.97; orbitY *= 0.985; }
     const idle = reduce ? 0 : Math.sin(t * 0.25) * 0.05;
     rx += ((my * 0.06) + orbitX - rx) * 0.05;
     ry += ((mx * 0.2) + idle + orbitY - ry) * 0.05;
