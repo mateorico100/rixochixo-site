@@ -15,6 +15,6 @@ Elastic and idealized. Not for design.
 
 ## home/ — rixochixo.com home v3 (2027)
 
-- `hero3d.js`: SCAN_01, a live point-cloud splat + depth mesh of Mateo (three.js r170). Move to look, drag to orbit, click to break it apart; SPLAT / MESH / DEPTH modes.
-- `me.bin` / `wire.bin`: made from one video frame by `site/home-v3/scan.py` (Depth Anything V2 small, run locally).
-- `home.css` / `home.js`: the page layer (blueprint field, grain, HUD type, decode headline, reveals, card spotlight, cursor).
+- `hero3d.js`: FILE 001, a live point-cloud + depth mesh of Mateo in shirt and tie (three.js r170). Drag to rotate; POINTS / MESH / DEPTH modes. v3.1: composed motion ("James Bond, not crazy").
+- `me.bin` / `wire.bin`: made from one photo by `site/home-v3/scan.py` (Depth Anything V2 small, run locally).
+- `home.css` / `home.js`: the page layer (blueprint field, HUD type, headline settle, reveals, card spotlight).
